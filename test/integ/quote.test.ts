@@ -149,10 +149,12 @@ describe('quote', function () {
       parseAmount('4000', WETH9[1]),
       parseAmount('5000000', DAI_MAINNET),
     ])
+    
+    console.log(await getBalance(alice, UNI_MAINNET));
   })
 
-  for (const algorithm of ['alpha', 'legacy']) {
-    for (const type of ['exactIn', 'exactOut']) {
+  for (const algorithm of ['alpha']) { // @note change back
+    for (const type of ['exactOut']) { // @note: change back
       describe(`${ID_TO_NETWORK_NAME(1)} ${algorithm} ${type} 2xx`, () => {
         describe(`+ simulate swap`, () => {
           it(`erc20 -> erc20`, async () => {
@@ -352,7 +354,7 @@ describe('quote', function () {
             }
           })
 
-          it(`eth -> erc20`, async () => {
+          it.only(`eth -> erc20`, async () => {
             const quoteReq: QuoteQueryParams = {
               tokenInAddress: 'ETH',
               tokenInChainId: 1,
@@ -367,6 +369,7 @@ describe('quote', function () {
               slippageTolerance: SLIPPAGE,
               deadline: '360',
               algorithm,
+              protocols: 'v2', // @note forcing routing through v2 only reproduces error
             }
 
             const queryParams = qs.stringify(quoteReq)
@@ -382,12 +385,18 @@ describe('quote', function () {
               Ether.onChain(1),
               UNI_MAINNET
             )
+            
+            console.log(data.methodParameters)
 
             if (type == 'exactIn') {
               // We've swapped 10 ETH + gas costs
               expect(tokenInBefore.subtract(tokenInAfter).greaterThan(parseAmount('10', Ether.onChain(1)))).to.be.true
               checkQuoteToken(tokenOutBefore, tokenOutAfter, CurrencyAmount.fromRawAmount(UNI_MAINNET, data.quote))
             } else {
+              console.log(
+                tokenOutAfter.toExact(),
+                tokenOutBefore.toExact()
+              )
               expect(tokenOutAfter.subtract(tokenOutBefore).toExact()).to.equal('10000')
               // Can't easily check slippage for ETH due to gas costs effecting ETH balance.
             }
